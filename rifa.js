@@ -16,6 +16,8 @@ const participantsList = document.getElementById('participantsList');
 const winnersList = document.getElementById('winnersList');
 const winnerDisplay = document.getElementById('winnerDisplay');
 const totalCount = document.getElementById('totalCount');
+const totalCountMain = document.getElementById('totalCountMain');
+const totalCountCollapsed = document.getElementById('totalCountCollapsed');
 const showQRBtn = document.getElementById('showQRBtn');
 const viewModeBtn = document.getElementById('viewModeBtn');
 const qrModal = document.getElementById('qrModal');
@@ -27,6 +29,9 @@ const winnerModal = document.getElementById('winnerModal');
 const winnerModalName = document.getElementById('winnerModalName');
 const winnerModalGerencia = document.getElementById('winnerModalGerencia');
 const continueBtn = document.getElementById('continueBtn');
+const toggleParticipantsBtn = document.getElementById('toggleParticipantsBtn');
+const participantsPanel = document.getElementById('participantsPanel');
+const toggleIcon = document.getElementById('toggleIcon');
 
 // Cargar datos del localStorage al iniciar
 window.addEventListener('DOMContentLoaded', () => {
@@ -143,24 +148,24 @@ showQRBtn.addEventListener('click', () => {
     const viewUrl = `${baseUrl}?view=true&room=${roomId}`;
     
     // Limpiar QR anterior
-    document.getElementById('qrcode').innerHTML = '';
+    const qrcodeContainer = document.getElementById('qrcode');
+    qrcodeContainer.innerHTML = '';
     
-    // Generar nuevo QR
-    QRCode.toCanvas(viewUrl, {
-        width: 250,
-        margin: 2,
-        color: {
-            dark: '#000000',
-            light: '#ffffff'
-        }
-    }, (error, canvas) => {
-        if (error) {
-            console.error(error);
-            showNotification('Error al generar QR', 'error');
-            return;
-        }
-        document.getElementById('qrcode').appendChild(canvas);
-    });
+    // Generar nuevo QR con QRCode.js
+    try {
+        new QRCode(qrcodeContainer, {
+            text: viewUrl,
+            width: 250,
+            height: 250,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+    } catch (error) {
+        console.error('Error generando QR:', error);
+        showNotification('Error al generar QR', 'error');
+        return;
+    }
     
     document.getElementById('shareUrl').textContent = viewUrl;
     qrModal.classList.remove('hidden');
@@ -184,6 +189,19 @@ viewModeBtn.addEventListener('click', () => {
     const baseUrl = window.location.origin + window.location.pathname;
     const viewUrl = `${baseUrl}?view=true&room=${roomId}`;
     window.open(viewUrl, '_blank');
+});
+
+// Toggle panel de participantes
+toggleParticipantsBtn.addEventListener('click', () => {
+    const isHidden = participantsPanel.classList.contains('hidden');
+    
+    if (isHidden) {
+        participantsPanel.classList.remove('hidden');
+        toggleIcon.style.transform = 'rotate(180deg)';
+    } else {
+        participantsPanel.classList.add('hidden');
+        toggleIcon.style.transform = 'rotate(0deg)';
+    }
 });
 
 // Procesar archivo CSV
@@ -578,8 +596,10 @@ function createConfetti() {
 
 // Actualizar interfaz
 function updateUI() {
-    // Actualizar contador
+    // Actualizar contadores
     totalCount.textContent = participants.length;
+    totalCountMain.textContent = participants.length;
+    totalCountCollapsed.textContent = participants.length;
     
     // Actualizar botón de sorteo
     raffleBtn.disabled = participants.length === 0;
