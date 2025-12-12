@@ -424,7 +424,7 @@ function performRaffle() {
     const degreesPerSegment = 360 / participants.length;
     const baseRotation = 360 * 5; // 5 vueltas completas
     const targetRotation = randomIndex * degreesPerSegment;
-    const totalRotation = baseRotation + (360 - targetRotation) + (degreesPerSegment / 2);
+    const totalRotation = baseRotation + (360 - targetRotation) - (degreesPerSegment / 2);
     
     // Aplicar animación
     const wheel = document.getElementById('raffleWheel');
@@ -455,7 +455,7 @@ function performRaffleViewer(winnerId) {
     const degreesPerSegment = 360 / participants.length;
     const baseRotation = 360 * 5;
     const targetRotation = winnerIndex * degreesPerSegment;
-    const totalRotation = baseRotation + (360 - targetRotation) + (degreesPerSegment / 2);
+    const totalRotation = baseRotation + (360 - targetRotation) - (degreesPerSegment / 2);
     
     const wheel = document.getElementById('raffleWheel');
     wheel.style.setProperty('--spin-degrees', `${totalRotation}deg`);
