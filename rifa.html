@@ -58,6 +58,10 @@
             display: none !important;
         }
         
+        .view-only .admin-only {
+            display: none !important;
+        }
+        
         .view-only {
             pointer-events: none;
         }
@@ -279,7 +283,7 @@
 
         <div class="grid md:grid-cols-1 gap-6">
             <!-- Botón de Sorteo - PROTAGONISTA -->
-            <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl shadow-lg border-2 border-green-200 p-8">
+            <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl shadow-lg border-2 border-green-200 p-8 admin-only">
                 <div class="text-center">
                     <div class="text-6xl mb-4">🎲</div>
                     <button 

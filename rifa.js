@@ -66,6 +66,18 @@ function initializeSocket() {
             }
             
             socket.emit('join-room', roomId);
+            
+            // Si es modo view, solicitar estado actual
+            if (isViewMode) {
+                socket.emit('request-current-state', roomId);
+            } else {
+                // Si es admin, enviar estado actual al servidor
+                socket.emit('sync-state', {
+                    room: roomId,
+                    participants: participants,
+                    winners: winners
+                });
+            }
         });
         
         socket.on('disconnect', () => {
@@ -114,6 +126,20 @@ function initializeSocket() {
         socket.on('close-winner-modal', () => {
             if (isViewMode) {
                 winnerModal.classList.add('hidden');
+            }
+        });
+        
+        // Recibir estado actual (para nuevos espectadores)
+        socket.on('current-state', (data) => {
+            if (isViewMode) {
+                participants = data.participants || [];
+                winners = data.winners || [];
+                updateUI();
+                
+                // Si hay un display del ganador actual, mostrarlo
+                if (data.currentDisplay) {
+                    winnerDisplay.innerHTML = data.currentDisplay;
+                }
             }
         });
         

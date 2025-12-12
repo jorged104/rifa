@@ -5,15 +5,40 @@ const io = require('socket.io')(http, {
     cors: {
         origin: "*",
         methods: ["GET", "POST"]
-    }
+    },
+    // Configuración optimizada para muchos usuarios
+    pingTimeout: 60000,
+    pingInterval: 25000,
+    upgradeTimeout: 30000,
+    maxHttpBufferSize: 1e6, // 1 MB
+    transports: ['websocket', 'polling']
 });
 const path = require('path');
 
 // Servir archivos estáticos
 app.use(express.static(__dirname));
 
+// Health check endpoint (útil para monitoreo)
+app.get('/health', (req, res) => {
+    res.json({
+        status: 'ok',
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString(),
+        activeRooms: rooms.size,
+        totalViewers: Array.from(rooms.values()).reduce((sum, room) => sum + room.viewers.size, 0)
+    });
+});
+
 // Almacenar información de las salas
 const rooms = new Map();
+
+// Estructura de cada sala: 
+// {
+//   viewers: Set(),
+//   participants: [],
+//   winners: [],
+//   currentDisplay: ''
+// }
 
 io.on('connection', (socket) => {
     console.log('Usuario conectado:', socket.id);
@@ -24,7 +49,12 @@ io.on('connection', (socket) => {
         
         // Inicializar sala si no existe
         if (!rooms.has(roomId)) {
-            rooms.set(roomId, { viewers: new Set() });
+            rooms.set(roomId, { 
+                viewers: new Set(),
+                participants: [],
+                winners: [],
+                currentDisplay: ''
+            });
         }
         
         // Agregar espectador
@@ -35,6 +65,28 @@ io.on('connection', (socket) => {
         io.to(roomId).emit('viewers-count', viewersCount);
         
         console.log(`Usuario ${socket.id} se unió a sala ${roomId}. Total espectadores: ${viewersCount}`);
+    });
+    
+    // Solicitar estado actual (para espectadores que se unen tarde)
+    socket.on('request-current-state', (roomId) => {
+        if (rooms.has(roomId)) {
+            const room = rooms.get(roomId);
+            socket.emit('current-state', {
+                participants: room.participants,
+                winners: room.winners,
+                currentDisplay: room.currentDisplay
+            });
+            console.log(`Enviando estado actual a ${socket.id} en sala ${roomId}`);
+        }
+    });
+    
+    // Sincronizar estado desde admin
+    socket.on('sync-state', (data) => {
+        console.log('Sincronizando estado en sala:', data.room);
+        if (rooms.has(data.room)) {
+            rooms.get(data.room).participants = data.participants || [];
+            rooms.get(data.room).winners = data.winners || [];
+        }
     });
     
     // Iniciar rifa
@@ -57,6 +109,12 @@ io.on('connection', (socket) => {
     // Actualizar participantes
     socket.on('update-participants', (data) => {
         console.log('Actualizando participantes en sala:', data.room);
+        
+        // Guardar en servidor
+        if (rooms.has(data.room)) {
+            rooms.get(data.room).participants = data.participants;
+        }
+        
         socket.to(data.room).emit('participants-updated', {
             participants: data.participants
         });
@@ -65,6 +123,12 @@ io.on('connection', (socket) => {
     // Actualizar ganadores
     socket.on('update-winners', (data) => {
         console.log('Actualizando ganadores en sala:', data.room);
+        
+        // Guardar en servidor
+        if (rooms.has(data.room)) {
+            rooms.get(data.room).winners = data.winners;
+        }
+        
         socket.to(data.room).emit('winners-updated', {
             winners: data.winners
         });
@@ -110,3 +174,9 @@ http.listen(PORT, () => {
     console.log(`🚀 Servidor Socket.IO corriendo en puerto ${PORT}`);
     console.log(`📡 Abre http://localhost:${PORT} para ver la aplicación`);
 });
+
+// Keep-alive: Prevenir que Railway duerma la aplicación
+setInterval(() => {
+    const timestamp = new Date().toISOString();
+    console.log(`💓 Keep-alive ping: ${timestamp} | Salas activas: ${rooms.size}`);
+}, 10 * 60 * 1000); // Cada 10 minutos
