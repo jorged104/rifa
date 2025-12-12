@@ -65,13 +65,19 @@ function initializeSocket() {
                 localStorage.setItem('roomId', roomId);
             }
             
+            console.log('🔌 Conectado al servidor');
+            console.log('🏠 Room ID:', roomId);
+            console.log('👁️ Modo View:', isViewMode);
+            
             socket.emit('join-room', roomId);
             
             // Si es modo view, solicitar estado actual
             if (isViewMode) {
+                console.log('📨 Solicitando estado actual...');
                 socket.emit('request-current-state', roomId);
             } else {
                 // Si es admin, enviar estado actual al servidor
+                console.log('📤 Sincronizando estado como admin...');
                 socket.emit('sync-state', {
                     room: roomId,
                     participants: participants,
@@ -131,15 +137,19 @@ function initializeSocket() {
         
         // Recibir estado actual (para nuevos espectadores)
         socket.on('current-state', (data) => {
+            console.log('📦 Estado recibido del servidor:', data);
             if (isViewMode) {
                 participants = data.participants || [];
                 winners = data.winners || [];
+                console.log('✅ Actualizando UI con:', participants.length, 'participantes y', winners.length, 'ganadores');
                 updateUI();
                 
                 // Si hay un display del ganador actual, mostrarlo
                 if (data.currentDisplay) {
                     winnerDisplay.innerHTML = data.currentDisplay;
                 }
+            } else {
+                console.log('⚠️ Estado recibido pero no estamos en modo view');
             }
         });
         
@@ -159,12 +169,19 @@ function generateRoomId() {
 function checkViewMode() {
     const urlParams = new URLSearchParams(window.location.search);
     const viewParam = urlParams.get('view');
+    const roomParam = urlParams.get('room');
     
     if (viewParam === 'true') {
         isViewMode = true;
         document.body.classList.add('view-only');
-        showQRBtn.style.display = 'none';
-        viewModeBtn.style.display = 'none';
+        if (showQRBtn) showQRBtn.style.display = 'none';
+        if (viewModeBtn) viewModeBtn.style.display = 'none';
+        
+        // IMPORTANTE: Obtener roomId de la URL
+        if (roomParam) {
+            roomId = roomParam;
+            console.log('Modo view activado con room:', roomId);
+        }
     }
 }
 
@@ -622,60 +639,75 @@ function createConfetti() {
 
 // Actualizar interfaz
 function updateUI() {
-    // Actualizar contadores
-    totalCount.textContent = participants.length;
-    totalCountMain.textContent = participants.length;
-    totalCountCollapsed.textContent = participants.length;
+    console.log('🔄 Actualizando UI...');
+    console.log('   Participantes:', participants.length);
+    console.log('   Ganadores:', winners.length);
+    console.log('   Modo view:', isViewMode);
     
-    // Actualizar botón de sorteo
-    raffleBtn.disabled = participants.length === 0;
+    // Actualizar contadores (verificar que existan)
+    if (totalCount) totalCount.textContent = participants.length;
+    if (totalCountMain) totalCountMain.textContent = participants.length;
+    if (totalCountCollapsed) totalCountCollapsed.textContent = participants.length;
     
-    // Actualizar lista de participantes
-    if (participants.length === 0) {
-        participantsList.innerHTML = `
-            <div class="text-center py-8 text-gray-400 text-sm">
-                No hay participantes aún
-            </div>
-        `;
-    } else {
-        participantsList.innerHTML = participants.map(p => `
-            <div class="participant-item flex items-center justify-between px-3 py-2 rounded-md group">
-                <div class="flex-1">
-                    <div class="text-sm text-gray-700 font-medium">${p.name}</div>
-                    <div class="text-xs text-gray-500">${p.gerencia}</div>
+    // Actualizar botón de sorteo (solo si existe - admin)
+    if (raffleBtn) {
+        raffleBtn.disabled = participants.length === 0;
+    }
+    
+    // Actualizar lista de participantes (solo si existe - puede estar oculta en view)
+    if (participantsList) {
+        if (participants.length === 0) {
+            participantsList.innerHTML = `
+                <div class="text-center py-8 text-gray-400 text-sm">
+                    No hay participantes aún
                 </div>
-                <button 
-                    onclick="removeParticipant(${p.id})"
-                    class="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity text-xs"
-                >
-                    ✕
-                </button>
-            </div>
-        `).join('');
+            `;
+        } else {
+            participantsList.innerHTML = participants.map(p => `
+                <div class="participant-item flex items-center justify-between px-3 py-2 rounded-md group">
+                    <div class="flex-1">
+                        <div class="text-sm text-gray-700 font-medium">${p.name}</div>
+                        <div class="text-xs text-gray-500">${p.gerencia || 'Sin gerencia'}</div>
+                    </div>
+                    ${!isViewMode ? `
+                    <button 
+                        onclick="removeParticipant(${p.id})"
+                        class="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+                    >
+                        ✕
+                    </button>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
     }
     
     // Actualizar lista de ganadores
-    if (winners.length === 0) {
-        winnersList.innerHTML = `
-            <div class="text-center py-8 text-gray-400 text-sm">
-                Aún no hay ganadores
-            </div>
-        `;
-    } else {
-        winnersList.innerHTML = winners.map((w, index) => `
-            <div class="winner-card flex items-center gap-3 p-3 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-lg border border-yellow-100">
-                <div class="flex-shrink-0 w-8 h-8 bg-yellow-400 text-white rounded-full flex items-center justify-center font-bold text-sm">
-                    ${index + 1}
+    if (winnersList) {
+        if (winners.length === 0) {
+            winnersList.innerHTML = `
+                <div class="text-center py-8 text-gray-400 text-sm">
+                    Aún no hay ganadores
                 </div>
-                <div class="flex-1">
-                    <div class="font-semibold text-gray-900 text-sm">${w.name}</div>
-                    <div class="text-xs text-gray-600">${w.gerencia}</div>
-                    <div class="text-xs text-gray-500">${formatDate(w.wonAt)}</div>
+            `;
+        } else {
+            winnersList.innerHTML = winners.map((w, index) => `
+                <div class="winner-card flex items-center gap-3 p-3 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-lg border border-yellow-100">
+                    <div class="flex-shrink-0 w-8 h-8 bg-yellow-400 text-white rounded-full flex items-center justify-center font-bold text-sm">
+                        ${index + 1}
+                    </div>
+                    <div class="flex-1">
+                        <div class="font-semibold text-gray-900 text-sm">${w.name}</div>
+                        <div class="text-xs text-gray-600">${w.gerencia || 'Sin gerencia'}</div>
+                        <div class="text-xs text-gray-500">${formatDate(w.wonAt)}</div>
+                    </div>
+                    <div class="text-xl">🏆</div>
                 </div>
-                <div class="text-xl">🏆</div>
-            </div>
-        `).join('');
+            `).join('');
+        }
     }
+    
+    console.log('✅ UI actualizada');
 }
 
 // Limpiar todo

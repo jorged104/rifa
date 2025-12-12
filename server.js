@@ -69,20 +69,30 @@ io.on('connection', (socket) => {
     
     // Solicitar estado actual (para espectadores que se unen tarde)
     socket.on('request-current-state', (roomId) => {
+        console.log(`📨 ${socket.id} solicita estado de sala ${roomId}`);
         if (rooms.has(roomId)) {
             const room = rooms.get(roomId);
+            console.log(`📦 Enviando estado: ${room.participants.length} participantes, ${room.winners.length} ganadores`);
             socket.emit('current-state', {
                 participants: room.participants,
                 winners: room.winners,
                 currentDisplay: room.currentDisplay
             });
-            console.log(`Enviando estado actual a ${socket.id} en sala ${roomId}`);
+        } else {
+            console.log(`⚠️ Sala ${roomId} no existe, enviando estado vacío`);
+            socket.emit('current-state', {
+                participants: [],
+                winners: [],
+                currentDisplay: ''
+            });
         }
     });
     
     // Sincronizar estado desde admin
     socket.on('sync-state', (data) => {
-        console.log('Sincronizando estado en sala:', data.room);
+        console.log(`🔄 Sincronizando estado en sala: ${data.room}`);
+        console.log(`   📊 ${data.participants?.length || 0} participantes`);
+        console.log(`   🏆 ${data.winners?.length || 0} ganadores`);
         if (rooms.has(data.room)) {
             rooms.get(data.room).participants = data.participants || [];
             rooms.get(data.room).winners = data.winners || [];

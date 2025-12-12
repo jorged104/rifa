@@ -282,20 +282,38 @@
         </div>
 
         <div class="grid md:grid-cols-1 gap-6">
-            <!-- Botón de Sorteo - PROTAGONISTA -->
-            <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl shadow-lg border-2 border-green-200 p-8 admin-only">
-                <div class="text-center">
-                    <div class="text-6xl mb-4">🎲</div>
+            <!-- RULETA - PROTAGONISTA -->
+            <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Resultado del Sorteo</h2>
+                
+                <div id="winnerDisplay" class="mb-6 p-8 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 min-h-[450px] flex items-center justify-center">
+                    <div class="text-center">
+                        <div class="text-6xl mb-4">🎲</div>
+                        <p class="text-gray-400 text-lg">Presiona el botón para girar la ruleta</p>
+                    </div>
+                </div>
+
+                <!-- Botón de Sorteo - Abajo de la ruleta -->
+                <div class="admin-only">
                     <button 
                         id="raffleBtn"
-                        class="w-full max-w-md mx-auto bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-bold py-6 px-8 rounded-2xl transition-all text-2xl shadow-xl hover:shadow-2xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                        class="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-bold py-4 px-6 rounded-xl transition-all text-xl shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                         disabled
                     >
                         🎉 Realizar Sorteo
                     </button>
-                    <p class="text-sm text-gray-600 mt-4">
-                        <span id="totalCountMain" class="font-bold text-green-600 text-xl">0</span> participantes listos
+                    <p class="text-center text-sm text-gray-600 mt-3">
+                        <span id="totalCountMain" class="font-bold text-green-600 text-lg">0</span> participantes listos
                     </p>
+                </div>
+            </div>
+
+            <!-- Historial de Ganadores -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">🏆 Historial de Ganadores</h3>
+                
+                <div id="winnersList" class="space-y-2 max-h-[400px] overflow-y-auto">
+                    <!-- Lista de ganadores -->
                 </div>
             </div>
 
@@ -389,24 +407,6 @@
             </div>
 
             <div class="grid md:grid-cols-1 gap-6">
-            <!-- Panel de Ruleta y Ganadores -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h2 class="text-lg font-semibold text-gray-900 mb-4">Resultado del Sorteo</h2>
-                
-                <div id="winnerDisplay" class="mb-6 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-100 min-h-[400px] flex items-center justify-center">
-                    <div class="text-center">
-                        <p class="text-gray-400 text-sm">Presiona "Realizar sorteo" para girar la ruleta</p>
-                    </div>
-                </div>
-
-                <div class="mb-3 text-sm text-gray-600 font-medium">
-                    Historial de ganadores
-                </div>
-                
-                <div id="winnersList" class="space-y-2 max-h-[400px] overflow-y-auto">
-                    <!-- Lista de ganadores -->
-                </div>
-            </div>
             </div>
         </div>
 
