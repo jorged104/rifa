@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rifa Digital</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .notion-input {
+            transition: all 0.2s ease;
+        }
+        
+        .notion-input:focus {
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+        
+        .winner-card {
+            animation: slideIn 0.4s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .participant-item {
+            transition: all 0.2s ease;
+        }
+        
+        .participant-item:hover {
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+        
+        .spinning {
+            animation: spin 0.5s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .view-only .admin-controls {
+            display: none !important;
+        }
+        
+        .view-only {
+            pointer-events: none;
+        }
+        
+        /* Ruleta */
+        .wheel-container {
+            perspective: 1000px;
+            position: relative;
+            width: 350px;
+            height: 350px;
+            margin: 0 auto;
+        }
+        
+        .wheel {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            border: 8px solid white;
+        }
+        
+        .wheel-segment {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            clip-path: polygon(50% 50%, 50% 0%, 100% 0%);
+            transform-origin: center center;
+        }
+        
+        .wheel-segment-inner {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding-top: 30px;
+        }
+        
+        .wheel-text {
+            font-size: 12px;
+            font-weight: 700;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+            text-align: center;
+            max-width: 80px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            transform: rotate(0deg);
+        }
+        
+        .wheel-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
+            border-radius: 50%;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            border: 4px solid #e5e7eb;
+        }
+        
+        .wheel-pointer {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-top: 35px solid #ef4444;
+            z-index: 20;
+            filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.4));
+        }
+        
+        .wheel-pointer::after {
+            content: '';
+            position: absolute;
+            top: -35px;
+            left: -15px;
+            width: 30px;
+            height: 30px;
+            background: #ef4444;
+            border-radius: 50%;
+            border: 3px solid white;
+        }
+        
+        @keyframes spin-wheel {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(var(--spin-degrees)); }
+        }
+        
+        .wheel-spinning {
+            animation: spin-wheel 10s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+        }
+        
+        /* Modal de Ganador */
+        .winner-modal {
+            backdrop-filter: blur(8px);
+        }
+        
+        .winner-modal-content {
+            animation: modalSlideIn 0.5s ease-out;
+        }
+        
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        .pulse-animation {
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="max-w-4xl mx-auto px-4 py-12">
+        <!-- Header -->
+        <div class="mb-12 text-center">
+            <h1 class="text-4xl font-bold text-gray-900 mb-2">🎲 Rifa Digital CHN</h1>
+            <p class="text-gray-500 text-sm">Donde la suerte se encuentra con la innovación | Gerencia de Operación de Soporte</p>
+            <p class="text-gray-400 text-xs mt-2">Desarrollado con ❤️ por Jorge Nowell</p>
+            
+            <!-- Botones de control -->
+            <div class="mt-4 flex justify-center gap-3">
+                <button 
+                    id="showQRBtn"
+                    class="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                    📱 Mostrar QR para compartir
+                </button>
+                <button 
+                    id="viewModeBtn"
+                    class="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                    👁️ Modo Visualización
+                </button>
+            </div>
+            
+            <!-- Estado de conexión -->
+            <div class="mt-3">
+                <span id="connectionStatus" class="text-xs text-gray-400">
+                    ⚪ Conectando al servidor...
+                </span>
+                <span id="viewersCount" class="text-xs text-gray-400 ml-3"></span>
+            </div>
+        </div>
+        
+        <!-- Modal QR -->
+        <div id="qrModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full">
+                <div class="text-center">
+                    <h3 class="text-xl font-bold text-gray-900 mb-4">Escanea para ver en vivo</h3>
+                    <div id="qrcode" class="flex justify-center mb-4"></div>
+                    <p class="text-sm text-gray-600 mb-2">O comparte este link:</p>
+                    <div class="bg-gray-50 p-3 rounded-lg mb-4">
+                        <code id="shareUrl" class="text-xs text-blue-600 break-all"></code>
+                    </div>
+                    <button 
+                        id="copyUrlBtn"
+                        class="w-full mb-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors"
+                    >
+                        📋 Copiar link
+                    </button>
+                    <button 
+                        id="closeQRBtn"
+                        class="w-full px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-medium rounded-lg transition-colors"
+                    >
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de Ganador -->
+        <div id="winnerModal" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4 winner-modal">
+            <div class="bg-white rounded-2xl shadow-2xl p-10 max-w-2xl w-full winner-modal-content">
+                <div class="text-center">
+                    <div class="text-8xl mb-6 pulse-animation">🏆</div>
+                    <h2 class="text-4xl font-bold text-gray-900 mb-3">¡GANADOR!</h2>
+                    <div class="bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl p-6 mb-6 border-2 border-yellow-300">
+                        <p id="winnerModalName" class="text-5xl font-bold text-gray-900 mb-2"></p>
+                        <p id="winnerModalGerencia" class="text-xl text-gray-600"></p>
+                    </div>
+                    <p class="text-lg text-gray-600 mb-8">Por favor acérquese a recibir su premio</p>
+                    <button 
+                        id="continueBtn"
+                        class="w-full px-6 py-4 bg-green-500 hover:bg-green-600 text-white text-lg font-bold rounded-lg transition-colors shadow-lg hover:shadow-xl"
+                    >
+                        ✅ Premio entregado - Continuar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-6">
+            <!-- Panel izquierdo: Agregar participantes -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 admin-controls">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Participantes</h2>
+                
+                <!-- Carga de CSV -->
+                <div class="mb-4 p-4 bg-blue-50 border border-blue-100 rounded-lg">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        📄 Cargar desde CSV
+                    </label>
+                    <input 
+                        type="file" 
+                        id="csvInput" 
+                        accept=".csv"
+                        class="text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-500 file:text-white hover:file:bg-blue-600 file:cursor-pointer"
+                    />
+                    <p class="text-xs text-gray-500 mt-2">Formato: no;nombre;gerencia</p>
+                </div>
+
+                <div class="relative mb-4">
+                    <div class="absolute inset-0 flex items-center">
+                        <div class="w-full border-t border-gray-200"></div>
+                    </div>
+                    <div class="relative flex justify-center text-xs">
+                        <span class="px-2 bg-white text-gray-400">o agregar manualmente</span>
+                    </div>
+                </div>
+                
+                <div class="mb-2">
+                    <input 
+                        type="text" 
+                        id="nameInput" 
+                        placeholder="Nombre del participante"
+                        class="notion-input w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 text-sm"
+                    />
+                </div>
+                
+                <div class="mb-4">
+                    <input 
+                        type="text" 
+                        id="gerenciaInput" 
+                        placeholder="Gerencia (opcional)"
+                        class="notion-input w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 text-sm"
+                    />
+                </div>
+                
+                <button 
+                    id="addBtn"
+                    class="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm mb-6"
+                >
+                    Agregar participante
+                </button>
+
+                <div class="mb-4 flex items-center justify-between">
+                    <span class="text-sm text-gray-600">
+                        Total: <span id="totalCount" class="font-semibold text-gray-900">0</span>
+                    </span>
+                    <button 
+                        id="clearBtn"
+                        class="text-xs text-red-500 hover:text-red-600 font-medium"
+                    >
+                        Limpiar todo
+                    </button>
+                </div>
+
+                <div id="participantsList" class="space-y-1 max-h-96 overflow-y-auto">
+                    <!-- Lista de participantes -->
+                </div>
+
+                <button 
+                    id="raffleBtn"
+                    class="w-full bg-green-500 hover:bg-green-600 text-white font-medium py-3 px-4 rounded-lg transition-colors text-sm mt-6"
+                    disabled
+                >
+                    🎉 Realizar sorteo
+                </button>
+            </div>
+
+            <!-- Panel derecho: Ganadores -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Ganadores</h2>
+                
+                <div id="winnerDisplay" class="mb-6 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-100 min-h-[400px] flex items-center justify-center">
+                    <div class="text-center">
+                        <p class="text-gray-400 text-sm">Presiona "Realizar sorteo" para girar la ruleta</p>
+                    </div>
+                </div>
+
+                <div class="mb-3 text-sm text-gray-600 font-medium">
+                    Historial de ganadores
+                </div>
+                
+                <div id="winnersList" class="space-y-2 max-h-[400px] overflow-y-auto">
+                    <!-- Lista de ganadores -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="mt-8 text-center text-xs text-gray-400">
+            <p>Desarrollado con ❤️ por Jorge Nowell | Gerencia de Operación de Soporte - CHN</p>
+            <p class="mt-1">Sistema de sorteos justos y transparentes</p>
+        </div>
+    </div>
+
+    <script src="rifa.js"></script>
+</body>
+</html>
