@@ -68,12 +68,13 @@
         
         /* Ruleta */
         .wheel-container {
-            perspective: 1000px;
-            position: relative;
-            width: 350px;
-            height: 350px;
-            margin: 0 auto;
-        }
+    perspective: 1000px;
+    position: relative;
+    width: 100%;          /* Ocupa el ancho disponible */
+    max-width: 350px;     /* No crece más allá de 350px (tamaño original) */
+    aspect-ratio: 1 / 1;  /* Mantiene la forma cuadrada automáticamente */
+    margin: 0 auto;
+}
         
         .wheel {
             width: 100%;
@@ -285,8 +286,8 @@
             <!-- RULETA - PROTAGONISTA -->
             <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-8">
                 <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Resultado del Sorteo</h2>
-                
-                <div id="winnerDisplay" class="mb-6 p-8 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 min-h-[450px] flex items-center justify-center">
+
+                <div id="winnerDisplay" class="mb-6 p-4 md:p-8 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 min-h-[450px] flex items-center justify-center"></div>
                     <div class="text-center">
                         <div class="text-6xl mb-4">🎲</div>
                         <p class="text-gray-400 text-lg">Presiona el botón para girar la ruleta</p>
